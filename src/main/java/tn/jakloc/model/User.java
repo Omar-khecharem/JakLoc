@@ -1,14 +1,12 @@
 package tn.jakloc.model;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * Shared user entity for the whole JakLoc application.
- *
- * <p>This class is used by authentication now and by future modules later.
- * It must never be duplicated in another package.</p>
- */
-public class User {
+// Shared user entity; kept in the session, so it must be serializable.
+public class User implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private long id;
     private String fullName;
@@ -45,9 +43,7 @@ public class User {
         this.email = email;
     }
 
-    /**
-     * Returns the BCrypt hash. The raw password is never stored on this object.
-     */
+    // Returns the BCrypt hash; the raw password is never stored here.
     public String getPasswordHash() {
         return passwordHash;
     }

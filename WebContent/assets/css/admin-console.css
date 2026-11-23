@@ -1,0 +1,123 @@
+/* Admin console: sample rental requests, three colored status stats, compact type, narrow sidebar. */
+
+/* Required by Material Symbols: the Google Fonts <link> only declares @font-face, this applies it. */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+:root {
+  --ac-card: #ffffff;
+  --ac-outline-soft: rgba(30, 33, 36, 0.06);
+  --ac-shadow-2: 0 12px 32px -8px rgba(30, 33, 36, 0.06), 0 2px 6px 0 rgba(30, 33, 36, 0.02);
+  /* base.css exposes --success/--error but not the amber container, so pending is local (§9). */
+  --ac-pending: #b87405;
+  --ac-pending-bg: rgba(245, 166, 35, 0.14);
+  --ac-ok: var(--success, #1e7e34);
+  --ac-ok-bg: var(--success-bg, rgba(52, 168, 83, 0.12));
+  --ac-bad: var(--error, #ba1a1a);
+  --ac-bad-bg: var(--error-bg, rgba(186, 26, 26, 0.10));
+  --ac-muted: var(--muted, #7e8289);
+}
+
+.admin-console { font-family: var(--font, "Plus Jakarta Sans", sans-serif); color: var(--on-surface, #1c1c19); background: var(--surface, #fdf9f4); }
+.ac-shell { display: grid; grid-template-columns: 210px 1fr; min-height: 100vh; }
+
+/* Sidebar (narrow) */
+.ac-sidebar { background: var(--charcoal, #1e2124); color: #fff; padding: 1rem .75rem; display: flex; flex-direction: column; gap: 1rem; }
+.ac-sidebar .brand { font-size: .95rem; }
+.ac-sidebar .brand-name { color: #fff; font-size: .95rem; }
+.ac-sidebar .brand-mark { width: 1.7rem; height: 1.7rem; font-size: .85rem; }
+.ac-nav { display: flex; flex-direction: column; gap: .15rem; }
+.ac-nav-item { display: flex; align-items: center; gap: .55rem; padding: .5rem .7rem; border-radius: var(--radius-pill, 9999px); color: rgba(255,255,255,.72); text-decoration: none; font-weight: 600; font-size: .78rem; }
+.ac-nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+.ac-nav-item.is-active { background: var(--primary-container, #f5a623); color: var(--on-primary-container, #644000); }
+.ac-nav-item .material-symbols-outlined { font-size: 1.05rem; }
+.ac-nav-item.is-disabled { opacity: .45; cursor: default; }
+.ac-nav-item.is-disabled:hover { background: none; color: rgba(255,255,255,.72); }
+.ac-soon { margin-left: auto; font-style: normal; font-size: .58rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; background: rgba(255,255,255,.12); padding: .1rem .35rem; border-radius: var(--radius-pill, 9999px); }
+
+/* Main */
+.ac-main { padding: 1.25rem 1.5rem 2rem; display: flex; flex-direction: column; gap: 1.1rem; }
+.ac-main .topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: none; padding: 0; }
+.ac-title { font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; margin: 0; }
+.topbar-actions { display: flex; align-items: center; gap: .6rem; }
+
+/* Stats: yellow / green / red, matching the request buckets */
+.ac-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.ac-stat { background: var(--ac-card); border: 1px solid var(--ac-outline-soft); border-radius: var(--radius-md, 1.5rem); padding: .8rem 1rem; box-shadow: var(--ac-shadow-2); display: flex; flex-direction: column; gap: .1rem; border-left: 4px solid transparent; }
+.ac-stat-num { font-size: 1.3rem; font-weight: 800; }
+.ac-stat-label { color: var(--ac-muted); font-size: .7rem; font-weight: 600; }
+.ac-stat-pending { border-left-color: var(--ac-pending); }
+.ac-stat-pending .ac-stat-num { color: var(--ac-pending); }
+.ac-stat-validated { border-left-color: var(--ac-ok); }
+.ac-stat-validated .ac-stat-num { color: var(--ac-ok); }
+.ac-stat-flagged { border-left-color: var(--ac-bad); }
+.ac-stat-flagged .ac-stat-num { color: var(--ac-bad); }
+
+/* Filters */
+.ac-filters { display: flex; flex-wrap: wrap; gap: .4rem; }
+.ac-pill { border: 1px solid var(--ac-outline-soft); background: var(--ac-card); color: var(--ac-muted); border-radius: var(--radius-pill, 9999px); padding: .4rem .8rem; font-weight: 600; font-size: .75rem; cursor: pointer; }
+.ac-pill.is-active { background: var(--charcoal, #1e2124); color: #fff; border-color: transparent; }
+
+/* Grid + request cards */
+.ac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: .9rem; }
+.ac-card { background: var(--ac-card); border: 1px solid var(--ac-outline-soft); border-radius: var(--radius-lg, 2rem); padding: 1.1rem; box-shadow: var(--ac-shadow-2); display: flex; flex-direction: column; gap: .7rem; }
+.ac-card-head { display: flex; align-items: flex-start; gap: .6rem; }
+.ac-avatar { width: 2.2rem; height: 2.2rem; border-radius: var(--radius-pill, 9999px); background: var(--charcoal, #1e2124); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: .8rem; flex: 0 0 auto; }
+.ac-id { flex: 1 1 auto; min-width: 0; }
+.ac-name { font-weight: 700; font-size: .92rem; margin: 0; }
+.ac-status { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: .25rem .55rem; border-radius: var(--radius-pill, 9999px); white-space: nowrap; }
+.ac-status[data-tone="pending"] { background: var(--ac-pending-bg); color: var(--ac-pending); }
+.ac-status[data-tone="validated"] { background: var(--ac-ok-bg); color: var(--ac-ok); }
+.ac-status[data-tone="flagged"] { background: var(--ac-bad-bg); color: var(--ac-bad); }
+.ac-divider { border: none; border-top: 1px solid var(--ac-outline-soft); margin: 0; }
+.ac-vehicle-name { font-weight: 700; font-size: .88rem; margin: 0; }
+.ac-vehicle-meta { color: var(--ac-muted); font-size: .74rem; margin: .05rem 0 0; }
+.ac-terms { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .76rem; }
+.ac-term { display: inline-flex; align-items: center; gap: .25rem; color: var(--on-surface-variant, #524534); }
+.ac-term .material-symbols-outlined { font-size: .95rem; }
+.ac-price { font-weight: 800; }
+.ac-price small { font-weight: 500; color: var(--ac-muted); }
+.ac-hold { display: inline-flex; align-items: center; gap: .2rem; font-weight: 600; }
+.ac-hold .material-symbols-outlined { font-size: .95rem; }
+.ac-hold[data-tone="ok"] { color: var(--ac-ok); }
+.ac-hold[data-tone="pending"] { color: var(--ac-pending); }
+.ac-docs { list-style: none; margin: 0; padding: .5rem .65rem; background: var(--surface-container, #f1ede8); border-radius: var(--radius-md, 1.5rem); display: flex; flex-wrap: wrap; gap: .3rem .8rem; font-size: .72rem; }
+.ac-doc-label { font-weight: 600; color: var(--ac-muted); }
+.ac-doc[data-tone="ok"] { color: var(--ac-ok); }
+.ac-doc[data-tone="warn"] { color: var(--ac-pending); }
+.ac-doc[data-tone="bad"] { color: var(--ac-bad); }
+.ac-actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: auto; }
+.ac-actions .btn { display: inline-flex; align-items: center; gap: .3rem; border-radius: var(--radius-pill, 9999px); padding: .5rem .9rem; font-weight: 700; font-size: .78rem; border: none; cursor: pointer; }
+.ac-actions .material-symbols-outlined { font-size: 1rem; }
+.ac-actions .btn[data-kind="primary"] { background: var(--primary-container, #f5a623); color: var(--on-primary-container, #644000); }
+.ac-actions .btn[data-kind="ghost"] { background: transparent; border: 1.5px solid var(--ac-outline-soft); color: var(--charcoal, #1e2124); }
+.ac-actions .btn[data-kind="danger"] { background: var(--charcoal, #1e2124); color: #fff; }
+.ac-note { font-size: .7rem; color: var(--ac-muted); margin: .1rem 0 0; }
+
+/* Empty state */
+.ac-empty { grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; background: var(--ac-card); border: 1px dashed var(--ac-outline-soft); border-radius: var(--radius-lg, 2rem); color: var(--ac-muted); }
+.ac-empty .material-symbols-outlined { font-size: 2rem; color: var(--primary-container, #f5a623); }
+.ac-empty h2 { color: var(--on-surface, #1c1c19); font-size: 1rem; margin: .4rem 0 .2rem; }
+.ac-empty p { font-size: .78rem; margin: 0; }
+
+/* Responsive */
+@media (max-width: 960px) {
+  .ac-shell { grid-template-columns: 1fr; }
+  .ac-sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .ac-stats { grid-template-columns: 1fr; }
+}

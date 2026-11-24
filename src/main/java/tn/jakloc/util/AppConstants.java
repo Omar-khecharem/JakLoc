@@ -13,6 +13,12 @@ public final class AppConstants {
     /** ServletContext attribute that holds the shared UserRepository. */
     public static final String USER_REPOSITORY = "userRepository";
 
+    /** ServletContext attribute that holds the shared VehicleService. */
+    public static final String VEHICLE_SERVICE = "vehicleService";
+
+    /** ServletContext attribute that holds the shared VehicleRepository. */
+    public static final String VEHICLE_REPOSITORY = "vehicleRepository";
+
     /** Session attribute that holds the authenticated {@code User}. */
     public static final String SESSION_USER = "authenticatedUser";
 
@@ -23,6 +29,11 @@ public final class AppConstants {
     public static final String REGISTER_PATH = "/register";
     public static final String LOGOUT_PATH = "/logout";
     public static final String CLIENT_DASHBOARD_PATH = "/client/dashboard";
+    public static final String CLIENT_VEHICLES_PATH = "/client/vehicles";
+    public static final String CLIENT_VEHICLE_DETAILS_PATTERN = CLIENT_VEHICLES_PATH + "/*";
+    public static final String CLIENT_BOOKINGS_PATH = "/client/bookings";
+    public static final String CLIENT_FAVORITES_PATH = "/client/favorites";
+    public static final String CLIENT_PROFILE_PATH = "/client/profile";
     public static final String ADMIN_DASHBOARD_PATH = "/admin/dashboard";
 
     /** Demo account created at application startup. Documented in README.md. */

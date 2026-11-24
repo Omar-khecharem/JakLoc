@@ -1,10 +1,10 @@
 # JakLoc
 
 JakLoc is a car rental and return management web application built as a
-university project with Jakarta EE 10. The first milestone covers the shared
-foundation and the **authentication module** (registration, login, logout,
-sessions and route protection). Vehicle, reservation and payment modules will be
-added in later milestones.
+university project with Jakarta EE 10. The current milestone covers the shared
+foundation, the **authentication module** and the **client dashboard and vehicle
+catalogue**. Vehicle management, reservations and payment modules will be added
+in later milestones.
 
 **Students:** Omar Khecherem and Moomen Msaadi
 
@@ -24,12 +24,20 @@ Implemented in this milestone:
 - Reusable CSS, password visibility toggle, responsive layouts.
 - In-memory user repository behind a `UserRepository` interface, ready to be
   replaced by a JDBC implementation later.
+- Client dashboard with fleet statistics and featured vehicles.
+- Vehicle catalogue with brand/model search, category, gearbox, fuel and daily
+  rate filters, plus price/name/seats/newest sorting.
+- Canonical `Vehicle` model, `VehicleRepository`, `VehicleService` and in-memory
+  demo vehicle data behind an interface.
+- Responsive RentalX-inspired client catalogue using `client.css` and
+  `client.js`, with an honest empty state and local placeholder artwork.
 
 Not implemented yet (future tasks):
 
-- Vehicle catalogue and vehicle management (Moomen's module).
-- Categories, search and filtering.
-- Reservations, returns, payments and the full admin dashboard.
+- Admin vehicle and category management.
+- Vehicle details page, reservations, returns, payments and the full admin
+  dashboard.
+- Favorites and profile editing.
 - MySQL/JDBC persistence and database configuration.
 
 ## Technology
@@ -52,24 +60,26 @@ Dynamic Web Project with its libraries bundled in `WEB-INF/lib`.
 ```
 JakLoc-Jakrata/
 ├── src/main/java/tn/jakloc/
-│   ├── model/                  User, Role
-│   ├── dao/                    InMemoryUserRepository
-│   ├── dao/interfaces/         UserRepository
-│   ├── service/                AuthService
+│   ├── model/                  User, Role, Vehicle, vehicle enums, VehicleFilter
+│   ├── dao/                    InMemoryUserRepository, InMemoryVehicleRepository,
+│   │                           VehicleSeeder
+│   ├── dao/interfaces/         UserRepository, VehicleRepository
+│   ├── service/                AuthService, VehicleService
 │   ├── servlet/auth/           Login, Register, Logout
-│   ├── servlet/client/         Client dashboard placeholder
+│   ├── servlet/client/         Client dashboard, vehicle catalogue, bookings,
+│   │                           favorites, profile
 │   ├── servlet/admin/          Admin dashboard placeholder
 │   ├── filter/                 AuthenticationFilter
 │   ├── util/                   AppConstants, PasswordUtil, SessionUtil,
 │   │                           ValidationUtil, AppContextListener
 │   └── exception/              DuplicateEmailException
 ├── WebContent/
-│   ├── assets/css/             base.css, auth.css, dashboard.css
-│   ├── assets/js/              auth.js
-│   ├── assets/images/          favicon.svg
+│   ├── assets/css/             base.css, auth.css, dashboard.css, client.css
+│   ├── assets/js/              auth.js, client.js
+│   ├── assets/images/          favicon.svg, vehicles/vehicle-placeholder.svg
 │   ├── WEB-INF/lib/            jBCrypt + JSTL jars
 │   ├── WEB-INF/views/auth/     login.jsp, register.jsp
-│   ├── WEB-INF/views/client/   dashboard.jsp
+│   ├── WEB-INF/views/client/   dashboard.jsp, vehicles/list.jsp, includes/
 │   ├── WEB-INF/views/admin/    dashboard.jsp
 │   ├── WEB-INF/views/errors/   403.jsp, 404.jsp, 500.jsp
 │   ├── WEB-INF/web.xml
@@ -130,6 +140,13 @@ Password: Admin@123
 The password is stored only as a BCrypt hash in memory. Change or remove this
 demo account before any real deployment.
 
+### Demo vehicle fleet
+
+Because MySQL/JDBC is not configured yet, `VehicleSeeder` adds eight demo
+vehicles to the in-memory repository at startup. Six are available, one is rented
+and one is in maintenance. Prices are displayed in Tunisian dinars (TND). This
+seed data is temporary and must be removed when the JDBC repository is added.
+
 ### Registration
 
 New accounts are always created with the `CLIENT` role. After registration the
@@ -183,6 +200,13 @@ Use this after deploying:
 - [ ] Logout invalidates the session; the Back button does not reveal the dashboard.
 - [ ] Opening `/client/dashboard` while signed out redirects to login with a notice.
 - [ ] Password visibility toggles work on both forms.
+- [ ] Client dashboard shows available car count, categories, starting rate and
+      three featured vehicles.
+- [ ] Catalogue search matches brand or model and preserves the query.
+- [ ] Category, gearbox, fuel and maximum-rate filters narrow the results.
+- [ ] Sorting by price, name, seats and newest changes the displayed order.
+- [ ] The Reset filters link and the empty state work.
+- [ ] Unavailable vehicles show their status and no Reserve action.
 - [ ] Layout is usable on desktop and mobile widths.
 
 ## Troubleshooting

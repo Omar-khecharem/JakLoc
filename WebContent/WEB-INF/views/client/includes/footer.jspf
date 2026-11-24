@@ -1,0 +1,12 @@
+<footer class="client-footer">
+    <div class="client-footer-inner">
+        <p class="client-footer-brand">
+            <span class="brand-mark" aria-hidden="true">J</span>
+            <span>JakLoc &middot; Rental management</span>
+        </p>
+        <p>Client area</p>
+    </div>
+</footer>
+<script src="${ctx}/assets/js/client.js" defer></script>
+</body>
+</html>

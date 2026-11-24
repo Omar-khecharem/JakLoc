@@ -6,9 +6,6 @@
 
     <display-name>JakLoc</display-name>
 
-    <request-character-encoding>UTF-8</request-character-encoding>
-    <response-character-encoding>UTF-8</response-character-encoding>
-
     <session-config>
         <session-timeout>30</session-timeout>
         <cookie-config>

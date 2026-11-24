@@ -1,0 +1,23 @@
+<header class="client-header">
+    <div class="client-header-inner">
+        <a class="brand" href="${ctx}/client/dashboard">
+            <span class="brand-mark" aria-hidden="true">J</span>
+            <span class="brand-name">JakLoc</span>
+        </a>
+
+        <%@ include file="/WEB-INF/views/client/includes/nav.jspf" %>
+
+        <div class="client-account">
+            <div class="user-chip">
+                <span class="avatar" aria-hidden="true"><c:out value="${fn:substring(sessionScope.authenticatedUser.fullName, 0, 1)}" /></span>
+                <span class="user-meta">
+                    <strong><c:out value="${sessionScope.authenticatedUser.fullName}" /></strong>
+                    <small><c:out value="${sessionScope.authenticatedUser.email}" /></small>
+                </span>
+            </div>
+            <form class="logout-form" action="${ctx}/logout" method="post">
+                <button class="btn btn-ghost btn-sm" type="submit">Sign out</button>
+            </form>
+        </div>
+    </div>
+</header>

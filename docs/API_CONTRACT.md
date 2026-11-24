@@ -1,7 +1,7 @@
 # JakLoc API Contract
 
-Version: 1.0
-Scope: shared foundation and authentication module
+Version: 1.2
+Scope: shared foundation, authentication and client vehicle catalogue
 Owners: Omar (authentication), Moomen (vehicles), shared foundation by both
 
 This document is the agreement between the two modules. Change it before
@@ -39,6 +39,58 @@ public enum Role {
 
 Do not add string role constants elsewhere. Use the enum.
 
+### 1.3 `tn.jakloc.model.Vehicle`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | `long` | Assigned by the repository; `0` means unsaved |
+| `brand` | `String` | Manufacturer name |
+| `model` | `String` | Model name |
+| `category` | `VehicleCategory` | See section 1.4 |
+| `transmission` | `Transmission` | `AUTOMATIC` or `MANUAL` |
+| `fuelType` | `FuelType` | `PETROL`, `DIESEL`, `HYBRID`, `ELECTRIC` |
+| `year` | `int` | Model year |
+| `seats` | `int` | Passenger capacity |
+| `doors` | `int` | Door count |
+| `dailyRate` | `java.math.BigDecimal` | Daily rental price; never use `double` for money |
+| `mileage` | `int` | Odometer reading in kilometres |
+| `location` | `String` | Pickup location label |
+| `imageUrl` | `String` | Optional image URL; the views fall back to a local placeholder |
+| `description` | `String` | Short catalogue description |
+| `status` | `VehicleStatus` | `AVAILABLE`, `RENTED` or `MAINTENANCE` |
+| `createdAt` | `java.time.LocalDateTime` | Record creation timestamp |
+
+Rules:
+
+- This is the single canonical vehicle model for both client and admin modules.
+- Use the `isAvailable()` helper for availability checks in Java and EL.
+- Display money through `<fmt:formatNumber>` using the `TND` currency symbol.
+- The current seeder is demo data, not production data. It exists because no
+  database exists yet and must be removed when a JDBC repository is added.
+
+### 1.4 Vehicle enums
+
+```java
+public enum VehicleCategory {
+    SUV, SEDAN, HATCHBACK, LUXURY, VAN, PICKUP, SPORTS, ELECTRIC
+}
+
+public enum Transmission {
+    AUTOMATIC, MANUAL
+}
+
+public enum FuelType {
+    PETROL, DIESEL, HYBRID, ELECTRIC
+}
+
+public enum VehicleStatus {
+    AVAILABLE, RENTED, MAINTENANCE
+}
+```
+
+Enums expose user-facing `label` values and CSS helpers where needed. Filter
+query parameters use the enum constant names (`SUV`, `AUTOMATIC`, `ELECTRIC`).
+
 ## 2. Persistence contract
 
 ### 2.1 `tn.jakloc.dao.interfaces.UserRepository`
@@ -59,6 +111,24 @@ Agreements:
 - The current implementation is `tn.jakloc.dao.InMemoryUserRepository`.
 - A future `JdbcUserRepository` must implement the same interface.
 - No servlet or JSP may call the repository directly for authentication.
+
+### 2.2 `tn.jakloc.dao.interfaces.VehicleRepository`
+
+```java
+List<Vehicle> findAll();
+Optional<Vehicle> findById(long id);
+List<Vehicle> findByStatus(VehicleStatus status);
+Vehicle save(Vehicle vehicle);
+```
+
+Agreements:
+
+- `findAll` returns vehicles ordered by id.
+- `save` assigns an id when `vehicle.getId() == 0`.
+- The current implementation is `tn.jakloc.dao.InMemoryVehicleRepository`.
+- A future `JdbcVehicleRepository` must implement the same interface and reuse
+  the single shared database configuration.
+- Servlets and JSPs must use `VehicleService`, not the repository directly.
 
 ## 3. Authentication service
 
@@ -88,6 +158,39 @@ Agreements:
 - Message is user-safe: "An account with this email already exists."
 - The servlet displays it on the email field.
 - A future JDBC implementation maps SQL unique violations to this exception.
+
+### 3.3 `tn.jakloc.service.VehicleService`
+
+```java
+public VehicleService(VehicleRepository vehicleRepository)
+
+public List<Vehicle> search(VehicleFilter filter)
+public List<Vehicle> getFeaturedVehicles(int limit)
+public long getAvailableCount()
+public long getAvailableCategoryCount()
+public BigDecimal getLowestAvailableRate()
+```
+
+`VehicleFilter` fields:
+
+```java
+String query;
+VehicleCategory category;
+Transmission transmission;
+FuelType fuelType;
+BigDecimal maxPrice;
+VehicleSort sort = VehicleSort.RECOMMENDED;
+```
+
+Agreements:
+
+- `query` matches brand, model, location and category label, case-insensitively.
+- Category, transmission, fuel and maximum daily rate filters are inclusive.
+- `VehicleSort` values are `RECOMMENDED`, `PRICE_ASC`, `PRICE_DESC`, `NAME_ASC`,
+  `SEATS_DESC` and `NEWEST`; an unknown value falls back to `RECOMMENDED`.
+- `RECOMMENDED` puts available vehicles first, then newest model year, then the
+  lowest daily rate.
+- Featured vehicles are available only and respect the requested limit.
 
 ## 4. Session contract
 
@@ -122,9 +225,12 @@ static String dashboardPath(User user)
 | --- | --- | --- |
 | `authService` | `AppConstants.AUTH_SERVICE` | `AuthService` |
 | `userRepository` | `AppConstants.USER_REPOSITORY` | `UserRepository` |
+| `vehicleService` | `AppConstants.VEHICLE_SERVICE` | `VehicleService` |
+| `vehicleRepository` | `AppConstants.VEHICLE_REPOSITORY` | `VehicleRepository` |
 
 These are created once in `AppContextListener`. Do not create additional
-application-wide instances.
+application-wide instances. `VehicleSeeder` populates the in-memory vehicle
+repository only when it is empty.
 
 ## 6. Route contract
 
@@ -137,6 +243,10 @@ application-wide instances.
 | POST | `/register` | public | `RegisterServlet` | redirect `/login?registered=1` |
 | POST | `/logout` | authenticated | `LogoutServlet` | redirect `/login?logout=1` |
 | GET | `/client/dashboard` | CLIENT | `ClientDashboardServlet` | `client/dashboard.jsp` |
+| GET | `/client/vehicles` | CLIENT | `VehicleCatalogServlet` | `client/vehicles/list.jsp` |
+| GET | `/client/bookings` | CLIENT | `MyBookingsServlet` | `client/bookings/list.jsp` (placeholder) |
+| GET | `/client/favorites` | CLIENT | `FavoritesServlet` | `client/favorites/list.jsp` (placeholder) |
+| GET | `/client/profile` | CLIENT | `ClientProfileServlet` | `client/profile.jsp` (read-only) |
 | GET | `/admin/dashboard` | ADMIN | `AdminDashboardServlet` | `admin/dashboard.jsp` |
 
 Views live under `WEB-INF/views/` and are reached only by forward, never by a
@@ -145,6 +255,12 @@ direct browser URL.
 ## 7. Authentication filter contract
 
 `tn.jakloc.filter.AuthenticationFilter` is mapped to `/*`.
+
+`tn.jakloc.filter.CharacterEncodingFilter` is also mapped to `/*` and only sets
+UTF-8 request/response encoding. It performs no access control. `web.xml` no
+longer declares the Servlet 6.0 encoding elements because the Eclipse WTP
+descriptor model used by the project rejects them; the filter provides the same
+behaviour at runtime.
 
 Public paths:
 
@@ -189,8 +305,8 @@ Use the same layers as authentication:
 | Service | `AuthService` | `VehicleService` |
 | Servlet | `servlet/auth/LoginServlet` | `servlet/client/VehicleListServlet`, `servlet/admin/VehicleAdminServlet` |
 | View | `WEB-INF/views/auth/login.jsp` | `WEB-INF/views/client/vehicles/list.jsp`, `WEB-INF/views/admin/vehicles/list.jsp` |
-| CSS | `assets/css/auth.css` | `assets/css/vehicles.css` |
-| JS | `assets/js/auth.js` | `assets/js/vehicles.js` |
+| CSS | `assets/css/auth.css` | `assets/css/client.css` for client pages |
+| JS | `assets/js/auth.js` | `assets/js/client.js` for catalogue behaviour |
 
 Additional rules:
 
@@ -229,6 +345,34 @@ Reusable classes:
 - Brand: `.brand`, `.brand-mark`, `.brand-name`.
 - Dashboard shell: `.app-page`, `.topbar`, `.dashboard`, `.info-card`,
   `.welcome-card`, `.status-pill`, `.user-chip`, `.avatar`.
+- Client layout: `client.css`, `.client-page`, `.client-header`,
+  `.client-nav`, `.client-nav-link`, `.client-account`, `.client-footer`,
+  `.client-page-head`, `.placeholder-card`, `.account-list`.
+- Client catalogue: `.catalog-hero`, `.catalog-toolbar`, `.search-capsule`,
+  `.filter-grid`, `.active-filters`, `.filter-chip`, `.vehicle-grid`,
+  `.vehicle-card`, `.vehicle-card__media`, `.vehicle-status`, `.vehicle-specs`,
+  `.empty-state`.
+- Client dashboard: `.client-hero`, `.client-stats`, `.client-stat`,
+  `.client-quick-grid`, `.quick-card`.
+
+Client JSP layout fragments live in
+`WEB-INF/views/client/includes/`:
+
+- `head.jspf` - document head, fonts and stylesheet links.
+- `header.jspf` - brand, client navigation and account actions.
+- `nav.jspf` - the five client navigation links with the active state.
+- `vehicle-card.jspf` - reusable vehicle card; expects a `vehicle` variable.
+- `footer.jspf` - footer, shared `client.js` and closing document tags.
+
+The catalogue form uses GET parameters `query`, `category`, `transmission`,
+`fuelType`, `maxPrice` and `sort`. `client.js` submits the form when a select
+changes and shows a loading label while the request is in flight. The form still
+works without JavaScript through the Search button.
+
+Each client page sets `ctx`, `pageTitle` and `activeNav` before including
+`head.jspf` and `header.jspf`, then closes with `footer.jspf`. The client
+navigation is rendered only for authenticated CLIENT sessions because every
+`/client/*` route is protected by `AuthenticationFilter`.
 
 JSP rules:
 
@@ -257,3 +401,5 @@ JSP rules:
 | Version | Date | Change |
 | --- | --- | --- |
 | 1.0 | Initial milestone | Shared User model, repository contract, AuthService, session contract, routes, filter rules, UI conventions |
+| 1.1 | Client foundation | Client layout fragments, navigation, client CSS and protected placeholder routes for vehicles, bookings, favorites and profile |
+| 1.2 | Client catalogue | Canonical `Vehicle` model, enums, `VehicleFilter`, in-memory vehicle repository and seeder, `VehicleService`, filtered/sorted catalogue, featured dashboard vehicles, `vehicle-card.jspf` and `client.js` |

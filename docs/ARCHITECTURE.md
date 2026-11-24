@@ -55,14 +55,14 @@ JSP + EL/JSTL render data only. No Java business logic.
 
 | Package | Responsibility | Must not contain |
 | --- | --- | --- |
-| `tn.jakloc.model` | Shared domain objects (`User`, `Role`) | SQL, HTTP, JSP logic |
-| `tn.jakloc.dao.interfaces` | Persistence contracts | Implementation details |
-| `tn.jakloc.dao` | Repository implementations | HTTP or session logic |
-| `tn.jakloc.service` | Business rules and use cases | Request/response objects |
+| `tn.jakloc.model` | Shared domain objects (`User`, `Role`, `Vehicle` and vehicle enums) | SQL, HTTP, JSP logic |
+| `tn.jakloc.dao.interfaces` | Persistence contracts (`UserRepository`, `VehicleRepository`) | Implementation details |
+| `tn.jakloc.dao` | Repository implementations and in-memory vehicle seed data | HTTP or session logic |
+| `tn.jakloc.service` | Business rules and use cases (`AuthService`, `VehicleService`) | Request/response objects |
 | `tn.jakloc.servlet.auth` | Login, registration, logout endpoints | Password hashing, SQL |
-| `tn.jakloc.servlet.client` | CLIENT pages | Admin-only features |
+| `tn.jakloc.servlet.client` | CLIENT dashboard and vehicle catalogue | Admin-only features |
 | `tn.jakloc.servlet.admin` | ADMIN pages | Client-only features |
-| `tn.jakloc.filter` | Cross-cutting request protection | Business rules |
+| `tn.jakloc.filter` | Cross-cutting request protection and UTF-8 encoding | Business rules |
 | `tn.jakloc.util` | Constants, validation, hashing, session, startup wiring | Domain logic |
 | `tn.jakloc.exception` | Application exceptions | Stack-trace exposure |
 
@@ -70,16 +70,18 @@ JSP + EL/JSTL render data only. No Java business logic.
 
 `AppContextListener` runs once when the application starts:
 
-1. Creates one `InMemoryUserRepository`.
-2. Creates one `AuthService` with that repository.
-3. Seeds the demo ADMIN account if it does not exist.
-4. Stores both objects in the `ServletContext` under
-   `AppConstants.USER_REPOSITORY` and `AppConstants.AUTH_SERVICE`.
+1. Creates one `InMemoryUserRepository` and one `InMemoryVehicleRepository`.
+2. Creates one `AuthService` and one `VehicleService`.
+3. Seeds the demo ADMIN account and, when the vehicle repository is empty, the
+   demo vehicle fleet.
+4. Stores the repositories and services in the `ServletContext` under their
+   `AppConstants` names.
 
 Servlets read the service in `init()`:
 
 ```java
 authService = (AuthService) getServletContext().getAttribute(AppConstants.AUTH_SERVICE);
+vehicleService = (VehicleService) getServletContext().getAttribute(AppConstants.VEHICLE_SERVICE);
 ```
 
 This keeps the in-memory data alive between requests without using static
@@ -194,21 +196,27 @@ listed in `PUBLIC_PATHS`.
 
 ## 8. Persistence strategy
 
-The current implementation is `InMemoryUserRepository`:
+The current implementation is `InMemoryUserRepository` for accounts and
+`InMemoryVehicleRepository` for the client catalogue:
 
 - Users are stored in a `ConcurrentHashMap` keyed by id.
-- An `AtomicLong` assigns ids.
+- Vehicles are stored in a `ConcurrentHashMap` keyed by id.
+- An `AtomicLong` assigns ids in each repository.
 - Email lookup is case-insensitive.
 - Saves are synchronized and reject duplicate emails.
+- `VehicleSeeder` adds demo vehicles only when the vehicle repository is empty.
 - Data is lost on server restart, which is acceptable for this milestone.
 
 ### Replacing it with JDBC later
 
-1. Create `tn.jakloc.dao.JdbcUserRepository implements UserRepository`.
-2. Use a single shared connection configuration (do not create a second one).
-3. Map SQL unique-constraint violations to `DuplicateEmailException`.
-4. Change only `AppContextListener` to instantiate the JDBC repository.
-5. Keep `AuthService`, servlets, filters and JSPs unchanged.
+1. Create `tn.jakloc.dao.JdbcUserRepository implements UserRepository` and
+   `tn.jakloc.dao.JdbcVehicleRepository implements VehicleRepository`.
+2. Use a single shared connection configuration for both repositories.
+3. Map SQL unique-constraint violations to `DuplicateEmailException` where
+   applicable.
+4. Change only `AppContextListener` to instantiate the JDBC repositories and
+   stop calling `VehicleSeeder`.
+5. Keep services, servlets, filters and JSPs unchanged.
 
 Suggested future table (not created yet):
 
@@ -253,21 +261,29 @@ Not implemented yet (acceptable for this milestone, document before release):
 - `base.css` contains design tokens and shared components.
 - `auth.css` contains the split-screen authentication layout.
 - `dashboard.css` contains the shared dashboard shell.
+- `client.css` contains the client header, dashboard, catalogue and vehicle
+  cards.
 - `auth.js` contains only two behaviors: password visibility and live
   password-match feedback.
+- `client.js` auto-submits catalogue filters and shows a loading label. The
+  search form remains usable without JavaScript.
 - Login and register pages use a dark editorial brand panel and a white auth
   card, following `DESIGN.md` (warm cream, charcoal, amber gold, Plus Jakarta
   Sans, pill buttons, diffused shadows).
+- The client dashboard and catalogue reuse the same design language, with
+  compact vehicle cards, filter capsules and a dark fleet hero.
 - Layouts collapse to a single column below 960px and to a single-column form
   below 560px.
 - Fonts load from Google Fonts with a system-font fallback.
 
 ## 11. Known limitations
 
-- In-memory users disappear on every redeploy or server restart.
+- In-memory users and vehicles disappear on every redeploy or server restart.
 - No database or JDBC configuration exists yet.
+- Vehicle data is demo seed data, not admin-managed production data.
 - The admin dashboard is a protected placeholder, not a feature.
-- The vehicle module is not implemented.
+- Vehicle details, reservations, cancellation, favorites, payments and profile
+  editing are not implemented.
 - No automated tests are included yet; verification is manual (see README).
 - The local Eclipse configuration references Tomcat 10.1; TomEE 10 must be added
   as a runtime in Eclipse before running on TomEE.

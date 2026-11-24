@@ -1,0 +1,82 @@
+<article class="vehicle-card ${vehicle.available ? '' : 'vehicle-card--unavailable'}">
+    <div class="vehicle-card__media vehicle-card__media--${vehicle.category.cssClass}">
+        <c:choose>
+            <c:when test="${not empty vehicle.imageUrl}">
+                <img class="vehicle-card__image"
+                     src="${fn:escapeXml(vehicle.imageUrl)}"
+                     alt="${fn:escapeXml(vehicle.displayName)}"
+                     width="800" height="500" loading="lazy">
+            </c:when>
+            <c:otherwise>
+                <img class="vehicle-card__image vehicle-card__image--placeholder"
+                     src="${ctx}/assets/images/vehicles/vehicle-placeholder.svg"
+                     alt="" width="800" height="500" loading="lazy">
+            </c:otherwise>
+        </c:choose>
+
+        <span class="vehicle-card__category"><c:out value="${vehicle.category.label}" /></span>
+        <span class="vehicle-status vehicle-status--${vehicle.status.cssClass}">
+            <c:out value="${vehicle.status.label}" />
+        </span>
+    </div>
+
+    <div class="vehicle-card__body">
+        <div class="vehicle-card__head">
+            <div>
+                <p class="vehicle-card__brand"><c:out value="${vehicle.brand}" /></p>
+                <h2 class="vehicle-card__title">
+                    <a class="vehicle-card__title-link" href="${ctx}/client/vehicles/${vehicle.id}">
+                        <c:out value="${vehicle.model}" />
+                    </a>
+                </h2>
+            </div>
+            <p class="vehicle-card__price">
+                <c:choose>
+                    <c:when test="${not empty vehicle.dailyRate}">
+                        <fmt:formatNumber value="${vehicle.dailyRate}" type="currency"
+                                          currencySymbol="TND " minFractionDigits="0"
+                                          maxFractionDigits="0" />
+                    </c:when>
+                    <c:otherwise>On request</c:otherwise>
+                </c:choose>
+                <span>/ day</span>
+            </p>
+        </div>
+
+        <p class="vehicle-card__description"><c:out value="${vehicle.description}" /></p>
+
+        <ul class="vehicle-specs" aria-label="Vehicle specifications">
+            <li>
+                <span>Year</span>
+                <strong><c:out value="${vehicle.year}" /></strong>
+            </li>
+            <li>
+                <span>Seats</span>
+                <strong><c:out value="${vehicle.seats}" /></strong>
+            </li>
+            <li>
+                <span>Gearbox</span>
+                <strong><c:out value="${vehicle.transmission.label}" /></strong>
+            </li>
+            <li>
+                <span>Fuel</span>
+                <strong><c:out value="${vehicle.fuelType.label}" /></strong>
+            </li>
+        </ul>
+
+        <div class="vehicle-card__footer">
+            <span class="vehicle-card__location">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 21s7-5.5 7-12a7 7 0 1 0-14 0c0 6.5 7 12 7 12Z" fill="none"
+                          stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    <circle cx="12" cy="9" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <c:out value="${vehicle.location}" />
+            </span>
+
+            <a class="btn ${vehicle.available ? 'btn-primary' : 'btn-ghost'} btn-sm"
+               href="${ctx}/client/vehicles/${vehicle.id}"
+               aria-label="View details for ${fn:escapeXml(vehicle.displayName)}">View details</a>
+        </div>
+    </div>
+</article>

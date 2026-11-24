@@ -70,7 +70,8 @@ a {
 }
 
 button,
-input {
+input,
+select {
     font: inherit;
 }
 
@@ -164,6 +165,12 @@ code {
 
 .btn:active {
     transform: translateY(1px);
+}
+
+.btn:disabled {
+    cursor: wait;
+    opacity: 0.7;
+    transform: none;
 }
 
 .btn-primary {

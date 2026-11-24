@@ -1,0 +1,17 @@
+<nav class="client-nav" aria-label="Client area">
+    <a class="client-nav-link ${activeNav eq 'dashboard' ? 'is-active' : ''}"
+       href="${ctx}/client/dashboard"
+       aria-current="${activeNav eq 'dashboard' ? 'page' : 'false'}">Dashboard</a>
+    <a class="client-nav-link ${activeNav eq 'vehicles' ? 'is-active' : ''}"
+       href="${ctx}/client/vehicles"
+       aria-current="${activeNav eq 'vehicles' ? 'page' : 'false'}">Vehicles</a>
+    <a class="client-nav-link ${activeNav eq 'bookings' ? 'is-active' : ''}"
+       href="${ctx}/client/bookings"
+       aria-current="${activeNav eq 'bookings' ? 'page' : 'false'}">My bookings</a>
+    <a class="client-nav-link ${activeNav eq 'favorites' ? 'is-active' : ''}"
+       href="${ctx}/client/favorites"
+       aria-current="${activeNav eq 'favorites' ? 'page' : 'false'}">Favorites</a>
+    <a class="client-nav-link ${activeNav eq 'profile' ? 'is-active' : ''}"
+       href="${ctx}/client/profile"
+       aria-current="${activeNav eq 'profile' ? 'page' : 'false'}">Profile</a>
+</nav>

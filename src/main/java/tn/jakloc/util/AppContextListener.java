@@ -4,24 +4,28 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
 import tn.jakloc.dao.InMemoryUserRepository;
+import tn.jakloc.dao.InMemoryVehicleRepository;
+import tn.jakloc.dao.VehicleSeeder;
 import tn.jakloc.dao.interfaces.UserRepository;
+import tn.jakloc.dao.interfaces.VehicleRepository;
 import tn.jakloc.exception.DuplicateEmailException;
 import tn.jakloc.model.Role;
 import tn.jakloc.model.User;
 import tn.jakloc.service.AuthService;
+import tn.jakloc.service.VehicleService;
 
 import java.time.LocalDateTime;
 
 /**
  * Application startup wiring.
  *
- * <p>One repository and one AuthService are created for the whole application
- * and stored in the ServletContext. Servlets read them from there instead of
- * creating their own instances, so the in-memory data survives between
- * requests.</p>
+ * <p>One repository and one service per module are created for the whole
+ * application and stored in the ServletContext. Servlets read them from there
+ * instead of creating their own instances, so the in-memory data survives
+ * between requests.</p>
  *
- * <p>When the JDBC repository is added later, only this class needs to change:
- * replace {@code new InMemoryUserRepository()} with the JDBC implementation.</p>
+ * <p>When JDBC repositories are added later, only this class needs to change:
+ * replace the in-memory implementations with the JDBC ones.</p>
  */
 @WebListener
 public class AppContextListener implements ServletContextListener {
@@ -31,11 +35,17 @@ public class AppContextListener implements ServletContextListener {
         UserRepository userRepository = new InMemoryUserRepository();
         AuthService authService = new AuthService(userRepository);
 
+        VehicleRepository vehicleRepository = new InMemoryVehicleRepository();
+        VehicleService vehicleService = new VehicleService(vehicleRepository);
+
         seedDemoAdmin(userRepository);
+        VehicleSeeder.seed(vehicleRepository);
 
         event.getServletContext().setAttribute(AppConstants.USER_REPOSITORY, userRepository);
         event.getServletContext().setAttribute(AppConstants.AUTH_SERVICE, authService);
-        event.getServletContext().log("JakLoc started: in-memory user repository ready.");
+        event.getServletContext().setAttribute(AppConstants.VEHICLE_REPOSITORY, vehicleRepository);
+        event.getServletContext().setAttribute(AppConstants.VEHICLE_SERVICE, vehicleService);
+        event.getServletContext().log("JakLoc started: in-memory user and vehicle repositories ready.");
     }
 
     @Override

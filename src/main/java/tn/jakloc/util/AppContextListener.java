@@ -3,8 +3,11 @@ package tn.jakloc.util;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
+import tn.jakloc.dao.Database;
 import tn.jakloc.dao.InMemoryUserRepository;
 import tn.jakloc.dao.InMemoryVehicleRepository;
+import tn.jakloc.dao.JdbcUserRepository;
+import tn.jakloc.dao.JdbcVehicleRepository;
 import tn.jakloc.dao.VehicleSeeder;
 import tn.jakloc.dao.interfaces.UserRepository;
 import tn.jakloc.dao.interfaces.VehicleRepository;
@@ -32,49 +35,80 @@ public class AppContextListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent event) {
-        UserRepository userRepository = new InMemoryUserRepository();
-        AuthService authService = new AuthService(userRepository);
+        Database.configure(event.getServletContext());
 
-        VehicleRepository vehicleRepository = new InMemoryVehicleRepository();
+        UserRepository userRepository;
+        VehicleRepository vehicleRepository;
+        boolean persistent = true;
+
+        try {
+            userRepository = new JdbcUserRepository();
+            vehicleRepository = new JdbcVehicleRepository();
+            // Touch both tables so a missing database or schema triggers the fallback.
+            userRepository.findAll();
+            vehicleRepository.findAll();
+        } catch (RuntimeException ex) {
+            event.getServletContext().log(
+                    "MySQL is not available, JakLoc will use in-memory storage for this run. "
+                    + "Run database/jakloc.sql and check JAKLOC_DB_URL, JAKLOC_DB_USER and "
+                    + "JAKLOC_DB_PASSWORD. Cause: " + ex.getMessage());
+            userRepository = new InMemoryUserRepository();
+            vehicleRepository = new InMemoryVehicleRepository();
+            persistent = false;
+        }
+
+        AuthService authService = new AuthService(userRepository);
         VehicleService vehicleService = new VehicleService(vehicleRepository);
 
-        seedDemoAdmin(userRepository);
+        seedDemoAccounts(userRepository);
         VehicleSeeder.seed(vehicleRepository);
 
         event.getServletContext().setAttribute(AppConstants.USER_REPOSITORY, userRepository);
         event.getServletContext().setAttribute(AppConstants.AUTH_SERVICE, authService);
         event.getServletContext().setAttribute(AppConstants.VEHICLE_REPOSITORY, vehicleRepository);
         event.getServletContext().setAttribute(AppConstants.VEHICLE_SERVICE, vehicleService);
-        event.getServletContext().log("JakLoc started: in-memory user and vehicle repositories ready.");
+        event.getServletContext().log(persistent
+                ? "JakLoc started: MySQL persistence is active."
+                : "JakLoc started: in-memory storage is active.");
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent event) {
-        // Nothing to release for the in-memory implementation.
+        // Nothing to release: connections are opened per operation.
     }
 
     /**
-     * Creates one ADMIN account so the admin route can be demonstrated before
-     * an administration module exists. Credentials are documented in README.
+     * Creates the demo ADMIN and CLIENT accounts when they are missing so both
+     * areas can be demonstrated. Credentials are documented in README.
      */
-    private void seedDemoAdmin(UserRepository userRepository) {
-        if (userRepository.existsByEmail(AppConstants.DEMO_ADMIN_EMAIL)) {
+    private void seedDemoAccounts(UserRepository userRepository) {
+        seedUser(userRepository, AppConstants.DEMO_ADMIN_EMAIL,
+                AppConstants.DEMO_ADMIN_PASSWORD, "JakLoc Administrator",
+                "+216 000 000 000", Role.ADMIN);
+        seedUser(userRepository, AppConstants.DEMO_CLIENT_EMAIL,
+                AppConstants.DEMO_CLIENT_PASSWORD, "Demo Client",
+                "+216 200 000 000", Role.CLIENT);
+    }
+
+    private void seedUser(UserRepository userRepository, String email, String rawPassword,
+            String fullName, String phone, Role role) {
+        if (userRepository.existsByEmail(email)) {
             return;
         }
 
-        User admin = new User();
-        admin.setFullName("JakLoc Administrator");
-        admin.setEmail(AppConstants.DEMO_ADMIN_EMAIL);
-        admin.setPhone("+216 000 000 000");
-        admin.setPasswordHash(PasswordUtil.hash(AppConstants.DEMO_ADMIN_PASSWORD));
-        admin.setRole(Role.ADMIN);
-        admin.setCreatedAt(LocalDateTime.now());
+        User user = new User();
+        user.setFullName(fullName);
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setPasswordHash(PasswordUtil.hash(rawPassword));
+        user.setRole(role);
+        user.setCreatedAt(LocalDateTime.now());
 
         try {
-            userRepository.save(admin);
+            userRepository.save(user);
         } catch (DuplicateEmailException ex) {
             // Cannot happen at startup, but never let it break deployment.
-            throw new IllegalStateException("Could not seed the demo admin account.", ex);
+            throw new IllegalStateException("Could not seed the demo account " + email + ".", ex);
         }
     }
 }

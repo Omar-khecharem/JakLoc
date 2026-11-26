@@ -44,8 +44,9 @@ Browser
    |
    v
 +---------------------------+
-| DAO implementations       |  InMemoryUserRepository now,
-| tn.jakloc.dao             |  JdbcUserRepository later
+| DAO implementations       |  JdbcUserRepository,
+| tn.jakloc.dao             |  JdbcVehicleRepository
+|                           |  (in-memory fallback)
 +---------------------------+
 
 JSP + EL/JSTL render data only. No Java business logic.
@@ -57,7 +58,7 @@ JSP + EL/JSTL render data only. No Java business logic.
 | --- | --- | --- |
 | `tn.jakloc.model` | Shared domain objects (`User`, `Role`, `Vehicle` and vehicle enums) | SQL, HTTP, JSP logic |
 | `tn.jakloc.dao.interfaces` | Persistence contracts (`UserRepository`, `VehicleRepository`) | Implementation details |
-| `tn.jakloc.dao` | Repository implementations and in-memory vehicle seed data | HTTP or session logic |
+| `tn.jakloc.dao` | JDBC repositories (`JdbcUserRepository`, `JdbcVehicleRepository`), `Database` connection helper, in-memory fallbacks and vehicle seed data | HTTP or session logic |
 | `tn.jakloc.service` | Business rules and use cases (`AuthService`, `VehicleService`) | Request/response objects |
 | `tn.jakloc.servlet.auth` | Login, registration, logout endpoints | Password hashing, SQL |
 | `tn.jakloc.servlet.client` | CLIENT dashboard and vehicle catalogue | Admin-only features |
@@ -70,11 +71,16 @@ JSP + EL/JSTL render data only. No Java business logic.
 
 `AppContextListener` runs once when the application starts:
 
-1. Creates one `InMemoryUserRepository` and one `InMemoryVehicleRepository`.
-2. Creates one `AuthService` and one `VehicleService`.
-3. Seeds the demo ADMIN account and, when the vehicle repository is empty, the
-   demo vehicle fleet.
-4. Stores the repositories and services in the `ServletContext` under their
+1. Calls `Database.configure(ServletContext)` to resolve the JDBC URL, user and
+   password from `web.xml` context parameters, environment variables or system
+   properties.
+2. Creates one `JdbcUserRepository` and one `JdbcVehicleRepository` and probes
+   them (`findAll`). If the connection or schema is unavailable, it logs the
+   cause and switches to `InMemoryUserRepository` / `InMemoryVehicleRepository`.
+3. Creates one `AuthService` and one `VehicleService`.
+4. Seeds the demo ADMIN and CLIENT accounts and, when the vehicle repository is
+   empty, the demo vehicle fleet.
+5. Stores the repositories and services in the `ServletContext` under their
    `AppConstants` names.
 
 Servlets read the service in `init()`:
@@ -84,7 +90,7 @@ authService = (AuthService) getServletContext().getAttribute(AppConstants.AUTH_S
 vehicleService = (VehicleService) getServletContext().getAttribute(AppConstants.VEHICLE_SERVICE);
 ```
 
-This keeps the in-memory data alive between requests without using static
+This keeps the selected repositories alive between requests without using static
 singletons in the servlet classes.
 
 ## 5. Authentication flows
@@ -196,44 +202,29 @@ listed in `PUBLIC_PATHS`.
 
 ## 8. Persistence strategy
 
-The current implementation is `InMemoryUserRepository` for accounts and
-`InMemoryVehicleRepository` for the client catalogue:
+The default implementation is JDBC against MySQL:
 
-- Users are stored in a `ConcurrentHashMap` keyed by id.
-- Vehicles are stored in a `ConcurrentHashMap` keyed by id.
-- An `AtomicLong` assigns ids in each repository.
+- `Database` resolves `jakloc.db.url`, `jakloc.db.user` and `jakloc.db.password`
+  from `web.xml`, then environment variables (`JAKLOC_DB_*`), then system
+  properties, then built-in defaults (`localhost:3306/jakloc`, `root`, empty).
+- `JdbcUserRepository` and `JdbcVehicleRepository` open a connection per
+  operation with try-with-resources and map rows to domain objects.
+- The SQL unique index on `users.email` is mapped to `DuplicateEmailException`,
+  complementing the service-level check.
 - Email lookup is case-insensitive.
-- Saves are synchronized and reject duplicate emails.
-- `VehicleSeeder` adds demo vehicles only when the vehicle repository is empty.
-- Data is lost on server restart, which is acceptable for this milestone.
+- Schema and seed data are in `database/jakloc.sql`.
+- `VehicleSeeder` inserts the demo fleet only when the `vehicles` table is empty.
 
-### Replacing it with JDBC later
+If the connection or schema is unavailable at startup, `AppContextListener`
+logs the cause and falls back to `InMemoryUserRepository` and
+`InMemoryVehicleRepository`, which use `ConcurrentHashMap` and `AtomicLong`.
+In that mode data is lost on restart.
 
-1. Create `tn.jakloc.dao.JdbcUserRepository implements UserRepository` and
-   `tn.jakloc.dao.JdbcVehicleRepository implements VehicleRepository`.
-2. Use a single shared connection configuration for both repositories.
-3. Map SQL unique-constraint violations to `DuplicateEmailException` where
-   applicable.
-4. Change only `AppContextListener` to instantiate the JDBC repositories and
-   stop calling `VehicleSeeder`.
-5. Keep services, servlets, filters and JSPs unchanged.
+### Schema
 
-Suggested future table (not created yet):
-
-```sql
-CREATE TABLE users (
-    id            BIGINT PRIMARY KEY AUTO_INCREMENT,
-    full_name     VARCHAR(80)  NOT NULL,
-    email         VARCHAR(254) NOT NULL UNIQUE,
-    password_hash VARCHAR(60)  NOT NULL,
-    phone         VARCHAR(20)  NOT NULL,
-    role          VARCHAR(10)  NOT NULL,
-    created_at    DATETIME     NOT NULL
-);
-```
-
-The unique index on `email` is the database-level duplicate protection that
-complements the service-level check.
+The canonical schema lives in `database/jakloc.sql`. The `users` table stores a
+BCrypt hash (never a plain password), and `vehicles` stores the catalogue fields
+plus the demo seed rows.
 
 ## 9. Security decisions
 
@@ -246,7 +237,7 @@ complements the service-level check.
 | Error messages | Generic login failure; no stack traces in JSPs |
 | Caching | `Cache-Control: no-store` on authenticated responses |
 | Output escaping | `<c:out>` and `fn:escapeXml` in JSPs |
-| Admin demo account | Seeded in memory; documented; must be removed/changed later |
+| Admin demo account | Seeded in MySQL and in memory; documented; must be removed/changed later |
 
 Not implemented yet (acceptable for this milestone, document before release):
 
@@ -278,8 +269,11 @@ Not implemented yet (acceptable for this milestone, document before release):
 
 ## 11. Known limitations
 
-- In-memory users and vehicles disappear on every redeploy or server restart.
-- No database or JDBC configuration exists yet.
+- Persistence requires MySQL to be running and `database/jakloc.sql` to be
+  applied; otherwise the app silently falls back to in-memory storage for that
+  run.
+- The JDBC layer opens a connection per operation; a pool (HikariCP) is a later
+  improvement.
 - Vehicle data is demo seed data, not admin-managed production data.
 - The admin dashboard is a protected placeholder, not a feature.
 - Vehicle details, reservations, cancellation, favorites, payments and profile

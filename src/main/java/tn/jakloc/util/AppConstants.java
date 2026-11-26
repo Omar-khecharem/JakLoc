@@ -40,6 +40,10 @@ public final class AppConstants {
     public static final String DEMO_ADMIN_EMAIL = "admin@jakloc.tn";
     public static final String DEMO_ADMIN_PASSWORD = "Admin@123";
 
+    /** Demo client account created at application startup. Documented in README.md. */
+    public static final String DEMO_CLIENT_EMAIL = "client@jakloc.tn";
+    public static final String DEMO_CLIENT_PASSWORD = "Client@123";
+
     private AppConstants() {
         // Utility class: do not instantiate.
     }
